@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 using TokenTest.Authentication;
 
 namespace TokenTest.Controllers
@@ -118,6 +119,13 @@ namespace TokenTest.Controllers
 
             return Ok(new Response { status = "Success", message = "User created successfully!" });
         }
+        private bool IsValidPhoneNumber(string phoneNumber)
+        {
+            // الگوی اعتبار سنجی برای شماره موبایل ایرانی
+            var phoneRegex = @"^(\+98|0)?9\d{9}$"; // شماره موبایل ایرانی (با یا بدون پیش شماره +98 یا 0)
+            return Regex.IsMatch(phoneNumber, phoneRegex);
+        }
+
     }
 
 }
