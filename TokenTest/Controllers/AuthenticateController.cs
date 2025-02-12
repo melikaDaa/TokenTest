@@ -28,15 +28,18 @@ namespace TokenTest.Controllers
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
             var user = await userManager.FindByNameAsync(model.Username);
-            if (user != null && await userManager.CheckPasswordAsync(user, model.Password))
+            if (user == null)
+                return Unauthorized(new { message = "نام کاربری یافت نشد!" });  // بهبود پیام خطا
+
+            if (await userManager.CheckPasswordAsync(user, model.Password))
             {
                 var userRoles = await userManager.GetRolesAsync(user);
 
                 var authClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                };
+        {
+            new Claim(ClaimTypes.Name, user.UserName),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        };
 
                 foreach (var userRole in userRoles)
                 {
@@ -51,7 +54,7 @@ namespace TokenTest.Controllers
                     expires: DateTime.Now.AddHours(3),
                     claims: authClaims,
                     signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
-                    );
+                );
 
                 return Ok(new
                 {
@@ -59,7 +62,7 @@ namespace TokenTest.Controllers
                     expiration = token.ValidTo
                 });
             }
-            return Unauthorized();
+            return Unauthorized(new { message = "رمز عبور اشتباه است!" });  // بهبود پیام خطا
         }
 
         [HttpPost]
@@ -68,7 +71,6 @@ namespace TokenTest.Controllers
         {
             var userExists = await userManager.FindByNameAsync(model.UserName);
             if (userExists != null)
-
                 return StatusCode(StatusCodes.Status500InternalServerError, new Response { status = "Error", message = "این کاربر وجود دارد!" });
 
             ApplicationUser user = new ApplicationUser()
@@ -77,13 +79,14 @@ namespace TokenTest.Controllers
                 SecurityStamp = Guid.NewGuid().ToString(),
                 Email = model.Email,
             };
-            var result = await userManager.CreateAsync(user);
+
+            var result = await userManager.CreateAsync(user, model.Password); // بهبود فرآیند ثبت نام با رمز عبور
             if (!result.Succeeded)
                 return StatusCode(StatusCodes.Status500InternalServerError, new Response { status = "Error", message = "خطا در ثبت نام ،مجددا تلاش کنید." });
 
-
             return Ok(new Response { status = "Success", message = "ثبت نام با موفقیت انجام شد!" });
         }
+
 
         [HttpPost]
         [Route("register-admin")]
